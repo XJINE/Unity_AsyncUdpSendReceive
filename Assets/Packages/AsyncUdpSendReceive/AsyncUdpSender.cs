@@ -5,7 +5,7 @@ public static class AsyncUdpSender
 {
     #region Field
 
-    static UdpClient udpClient;
+    private static readonly UdpClient UdpClient;
 
     #endregion Field
 
@@ -13,7 +13,7 @@ public static class AsyncUdpSender
 
     static AsyncUdpSender()
     {
-        udpClient = new UdpClient();
+        UdpClient = new UdpClient();
     }
 
     public static void Send(string address, int port, byte[] data)
@@ -23,7 +23,7 @@ public static class AsyncUdpSender
 
     public static async void Send(IPEndPoint endPoint, byte[] data)
     {
-        await udpClient.SendAsync(data, data.Length, endPoint);
+        await UdpClient.SendAsync(data, data.Length, endPoint);
     }
 
     #endregion Method

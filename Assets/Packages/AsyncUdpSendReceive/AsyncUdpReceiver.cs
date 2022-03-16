@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -12,18 +13,18 @@ public class AsyncUdpReceiver : MonoBehaviour
 
     #region Field
 
-    [SerializeField] protected int port          = 22222;
-    [SerializeField] protected int listenerCount = 100;
-
-    public UdpReceiveEvent OnReceive;
-    public ExceptionEvent  OnException;
-
-    protected UdpClient  udpClient;
-    protected List<Task> listeners;
-
     // NOTE:
     // To receive some UDPs in same frame, make many listeners.
     // If not, this will receive only one UDP in a same frame.
+
+    [SerializeField] protected int port          = 22222;
+    [SerializeField] protected int listenerCount = 100;
+
+    public UdpReceiveEvent onReceive;
+    public ExceptionEvent  onException;
+
+    protected UdpClient  UdpClient;
+    protected List<Task> Listeners;
 
     #endregion Field
 
@@ -37,77 +38,73 @@ public class AsyncUdpReceiver : MonoBehaviour
 
     protected void Awake()
     {
-        this.udpClient = new UdpClient(this.port);
+        UdpClient = new UdpClient(port);
     }
 
     protected void OnEnable()
     {
-        if (this.IsListening)
+        if (IsListening)
         {
             return;
         }
 
-        this.IsListening = true;
+        IsListening = true;
 
-        this.listeners = new List<Task>();
+        Listeners = new List<Task>();
 
-        for (int i = 0; i < this.listenerCount; i++)
+        for (var i = 0; i < listenerCount; i++)
         {
-            this.listeners.Add(Listen());
+            Listeners.Add(Listen());
         }
     }
 
     protected void OnDisable()
     {  
-        if (!this.IsListening)
+        if (!IsListening)
         {
             return;
         }
 
-        this.IsListening = false;
+        IsListening = false;
 
         // NOTE:
         // Need to wait current receive-task close.
 
-        foreach (var listener in this.listeners)
+        foreach (var listener in Listeners.Where(listener => listener is {Status: TaskStatus.Running}))
         {
-            if (listener != null && listener.Status == TaskStatus.Running)
-            {
-                listener.Wait();
-                listener.Dispose();
-            }
+            listener.Wait();
+            listener.Dispose();
         }
 
-        this.udpClient.Dispose();
+        UdpClient.Dispose();
     }
 
     protected async Task Listen()
     {
-        while(this.IsListening)
+        while(IsListening)
         {
             try
             {
                 // NOTE:
                 // Unity will process the functions after 'await' in a same thread. This is specification.
+
+                // NOTE:
                 // To make these multi-thread, we can use 'ReceiveAsync().ConfigureAwait(false)'.
-                // However, non-main thread cannont access the 'UnityEvent.Invoke'.
-                // 
+                // However, non-main thread cannot access the 'UnityEvent.Invoke'.
                 // var receive = await this.udpClient.ReceiveAsync().ConfigureAwait(false);
 
-                var receive = await this.udpClient.ReceiveAsync();
+                var receive = await UdpClient.ReceiveAsync();
 
-                OnReceive.Invoke(receive);
+                onReceive.Invoke(receive);
 
                 // NOTE:
                 // Time.frameCount also accessible from only a main thread.
-                // 
                 // Debug.Log(System.Threading.Thread.CurrentThread.ManagedThreadId);
                 // Debug.Log(Time.frameCount);
             }
             catch (Exception exception)
             {
-                OnException.Invoke(exception);
-
+                onException.Invoke(exception);
                 // Debug.Log(exception);
             }
         }
