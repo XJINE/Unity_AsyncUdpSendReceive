@@ -17,8 +17,13 @@ public class AsyncUdpReceiver : MonoBehaviour
     // To receive some UDPs in same frame, make many listeners.
     // If not, this will receive only one UDP in a same frame.
 
+    // NOTE:
+    // Default buffer size can be obtained from UdpClient.Client.ReceiveBufferSize.
+    // In most cases, it is 65536 (64KB).
+    
     [SerializeField] protected int port          = 22222;
-    [SerializeField] protected int listenerCount = 100;
+    [SerializeField] protected int bufferSize    = 65536;
+    [SerializeField] protected int listenerCount = 10;
 
     public UdpReceiveEvent onReceive;
     public ExceptionEvent  onException;
@@ -39,6 +44,7 @@ public class AsyncUdpReceiver : MonoBehaviour
     protected void Awake()
     {
         UdpClient = new UdpClient(port);
+        UdpClient.Client.ReceiveBufferSize = bufferSize;
     }
 
     protected void OnEnable()
