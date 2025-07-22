@@ -21,9 +21,9 @@ public class AsyncUdpReceiver : MonoBehaviour
     // Default buffer size can be obtained from UdpClient.Client.ReceiveBufferSize.
     // In most cases, it is 65536 (64KB).
     
-    [SerializeField] protected int port          = 22222;
-    [SerializeField] protected int bufferSize    = 65536;
-    [SerializeField] protected int listenerCount = 10;
+    public int port          = 22222;
+    public int bufferSize    = 65536;
+    public int listenerCount = 10;
 
     public UdpReceiveEvent onReceive;
     public ExceptionEvent  onException;
@@ -41,48 +41,14 @@ public class AsyncUdpReceiver : MonoBehaviour
 
     #region Method
 
-    protected void Awake()
-    {
-        UdpClient = new UdpClient(port);
-        UdpClient.Client.ReceiveBufferSize = bufferSize;
-    }
-
     protected void OnEnable()
     {
-        if (IsListening)
-        {
-            return;
-        }
-
-        IsListening = true;
-
-        Listeners = new List<Task>();
-
-        for (var i = 0; i < listenerCount; i++)
-        {
-            Listeners.Add(Listen());
-        }
+        Initialize();
     }
 
     protected void OnDisable()
-    {  
-        if (!IsListening)
-        {
-            return;
-        }
-
-        IsListening = false;
-
-        // NOTE:
-        // Need to wait current receive-task close.
-
-        foreach (var listener in Listeners.Where(listener => listener is {Status: TaskStatus.Running}))
-        {
-            listener.Wait();
-            listener.Dispose();
-        }
-
-        UdpClient.Dispose();
+    {
+        Dispose();
     }
 
     protected async Task Listen()
@@ -114,6 +80,50 @@ public class AsyncUdpReceiver : MonoBehaviour
                 // Debug.Log(exception);
             }
         }
+    }
+
+    [ContextMenu(nameof(Initialize))]
+    public void Initialize()
+    {
+        if (IsListening)
+        {
+            Dispose();
+        }
+
+        IsListening = true;
+
+        UdpClient = new UdpClient(port);
+        UdpClient.Client.ReceiveBufferSize = bufferSize;
+
+        Listeners = new List<Task>(listenerCount);
+
+        for (var i = 0; i < listenerCount; i++)
+        {
+            Listeners.Add(Listen());
+        }
+    }
+
+    [ContextMenu(nameof(Dispose))]
+    public void Dispose()
+    {
+        IsListening = false;
+
+        UdpClient?.Dispose();
+        UdpClient = null;
+
+        if(Listeners == null)
+        {
+            return;
+        }
+
+        foreach (var listener in Listeners.Where(listener => listener is {Status: TaskStatus.Running}))
+        {
+            listener.Wait();
+            listener.Dispose();
+        }
+
+        Listeners?.Clear();
+        Listeners = null;
     }
 
     #endregion Method
