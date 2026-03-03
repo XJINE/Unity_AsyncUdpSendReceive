@@ -21,9 +21,10 @@ public class AsyncUdpReceiver : MonoBehaviour
     // Default buffer size can be obtained from UdpClient.Client.ReceiveBufferSize.
     // In most cases, it is 65536 (64KB).
     
-    public int port          = 22222;
-    public int bufferSize    = 65536;
-    public int listenerCount = 10;
+    public int  port          = 22222;
+    public int  bufferSize    = 65536;
+    public int  listenerCount = 10;
+    public bool initOnEnable  = true;
 
     public UdpReceiveEvent onReceive;
     public ExceptionEvent  onException;
@@ -43,7 +44,10 @@ public class AsyncUdpReceiver : MonoBehaviour
 
     protected void OnEnable()
     {
-        Initialize();
+        if (initOnEnable)
+        {
+            Initialize();
+        }
     }
 
     protected void OnDisable()
